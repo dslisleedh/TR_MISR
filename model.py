@@ -69,8 +69,26 @@ class TRNet(tf.keras.models.Model):
 
         recon = self.forward(lr, attention_mask=attention_mask, training=False)
         self.compiled_loss(hr, recon, regularization_losses=self.losses)
-
         self.compiled_metrics.update_state(hr, recon)
+
+        val_psnr = [m.result() for m in self.metrics if m.name == 'psnr'][0]
+
+        def good_cond():
+            self.decay_patience = 0
+            self.best_validation_psnr = val_psnr
+
+        def bad_cond():
+            self.decay_patience += 1
+            if self.decay_patience > 3:
+                self.fu_optimizer.learning_rate = .95 * self.fu_optimizer.learning_rate
+                self.ed_optimizer.learning_rate = .95 * self.ed_optimizer.learning_rate
+
+        tf.cond(
+            tf.math.less(self.best_validation_psnr, val_psnr),
+            good_cond,
+            bad_cond
+        )
+
         return {m.name: m.result() for m in self.metrics}
 
     def forward(self, x, attention_mask=None, training=False):
