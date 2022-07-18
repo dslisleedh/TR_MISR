@@ -80,6 +80,7 @@ class TRNet(tf.keras.models.Model):
         def bad_cond():
             self.decay_patience += 1
             if self.decay_patience > 3:
+                self.decay_patience = 0
                 self.fu_optimizer.learning_rate = .95 * self.fu_optimizer.learning_rate
                 self.ed_optimizer.learning_rate = .95 * self.ed_optimizer.learning_rate
 
